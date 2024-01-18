@@ -1,0 +1,9 @@
+# cd /Users/Joseph/Wokspace/logging_monitoring-workshop/GCP-base/terraform/wyno-app
+# gcloud builds submit  
+# gsutil iam ch allUsers:objectViewer gs://vertex-xyz1_cloudbuild
+
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: [ 'build', '-t', 'us-central1-docker.pkg.dev/vertex-xyz1/rag/wynnsights:1.0.0', '.']
+images:
+- 'us-central1-docker.pkg.dev/vertex-xyz1/rag/wynnsights:1.0.0'
