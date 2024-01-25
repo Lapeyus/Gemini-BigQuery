@@ -1,3 +1,4 @@
+
 import os
 import re
 import pandas as pd
@@ -13,12 +14,15 @@ from langchain_google_vertexai import ChatVertexAI
 from langchain.schema.output_parser import StrOutputParser
 from langchain_community.document_loaders import BigQueryLoader
 
+# Load environment variables and configure GoogleAI
 load_dotenv()
 REGION = os.getenv('REGION')
 PROJECT_ID = os.getenv('PROJECT_ID')
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
 
+
+# Define helper functions
 def parse_bigquery_schema(documents):
     result = []
     for doc in documents:
@@ -34,12 +38,6 @@ def parse_bigquery_schema(documents):
         result.append(table_info + column_info)
     return "\n\n".join(result)
 
-# def format_table(df):
-#     formatted_strings = []
-#     for row_name, row in df.iterrows():
-#         for col_name in df.columns:
-#             formatted_strings.append(f"{row_name}:{col_name}")
-#     return ', '.join(formatted_strings)
 
 def schema_query(dataset):
     query = f"""
@@ -50,26 +48,6 @@ def schema_query(dataset):
     """
     return query
 
-# def dataframe_to_schema_dict(df):
-#     """
-#     Convert a DataFrame to a dictionary format expected by display_schema.
-#     Each column in the DataFrame should represent a field in a table.
-#     """
-#     schema_dict = {}
-#     for column in df.columns:
-#         table_name, field_name, field_type = column.split('.')  # Adjust this line based on your DataFrame's column format
-#         if table_name not in schema_dict:
-#             schema_dict[table_name] = {}
-#         schema_dict[table_name][field_name] = field_type
-#     return schema_dict
-
-# def display_schema(schema):
-#     if isinstance(schema, pd.DataFrame):
-#         schema = dataframe_to_schema_dict(schema)
-#     for table_name, fields in schema.items():
-#         st.subheader(f"Table: {table_name}")
-#         for field_name, field_type in fields.items():
-#             st.text(f"{field_name} ({field_type})")
 
 def parse_bigquery_schema_to_dict(documents):
     schema_dict = {}
@@ -84,6 +62,8 @@ def parse_bigquery_schema_to_dict(documents):
         schema_dict[table_name] = {col.split()[0]: col.split()[1] for col in columns}
     return schema_dict
 
+
+# Streamlit setup
 st.set_page_config(
     page_title="BigQueryAI",
     page_icon=":hotel:",
@@ -116,6 +96,7 @@ generated googlesql: \n\n{googlesql}
 data response: \n\n{response}
 """
 
+# Initialize BigQuery client and data loader
 client = bigquery.Client()
 loader = BigQueryLoader(
     query=schema_query(dataset),
@@ -123,15 +104,21 @@ loader = BigQueryLoader(
     page_content_columns="ddl"
 )
 
+# Load data and parse schema
 data = loader.load()
+st.session_state['dataframe'] = parse_bigquery_schema(data)
 
+# Select LLM model
 model_name = st.sidebar.selectbox("LLM Model Name", ("gemini-pro","codechat-bison"))
+
+# Set model parameters
 max_output_tokens = st.sidebar.number_input("Max Output Tokens", min_value=1, value=2048)
 temperature = st.sidebar.slider("Temperature (Randomness)", 0.0, 1.0, 0.0)
 top_p = st.sidebar.slider("Top P (Determinism)", min_value=0, max_value=1,value=1)
 top_k = st.sidebar.number_input("Top K (Vocabulary probability)", min_value=0, max_value=1,value=1)
 verbose = st.sidebar.checkbox("Verbose", value=True)
 
+# Initialize LLM instance
 if model_name =="gemini-pro":
     llm = ChatGoogleGenerativeAI(
         model=model_name,
@@ -152,14 +139,17 @@ else:
         verbose=verbose,
     )
 
+# Initialize output parser
 output_parser = StrOutputParser()
 
+# Define prompt templates
 prompt = PromptTemplate.from_template(template)
 chain = prompt | llm | output_parser
 
 describe_prompt = PromptTemplate.from_template(describe_template)
 describe_chain = describe_prompt | llm | output_parser
 
+# Initialize UI elements
 with st.container():
     user_query = st.text_input("Enter your query:")
     col1, col2 = st.columns(2)
@@ -167,9 +157,9 @@ with st.container():
     with col2:
         data_placeholder = col2.expander("Data", expanded=True).empty()
         schema_placeholder = col2.expander("BQ Schema", expanded=False).empty()
-        st.session_state['dataframe'] = parse_bigquery_schema(data)
         schema_placeholder.write(parse_bigquery_schema_to_dict(data))
 
+# Generate query, execute it, and display results
 if col1.button("Generate Query"):
     bqschema = parse_bigquery_schema(data)
     googlesql = (
