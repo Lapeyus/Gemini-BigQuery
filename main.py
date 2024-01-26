@@ -1,3 +1,4 @@
+
 import os
 import re
 import pandas as pd
@@ -19,6 +20,7 @@ PROJECT_ID = os.getenv('PROJECT_ID')
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
 
+
 def parse_bigquery_schema(documents):
     result = []
     for doc in documents:
@@ -34,42 +36,6 @@ def parse_bigquery_schema(documents):
         result.append(table_info + column_info)
     return "\n\n".join(result)
 
-# def format_table(df):
-#     formatted_strings = []
-#     for row_name, row in df.iterrows():
-#         for col_name in df.columns:
-#             formatted_strings.append(f"{row_name}:{col_name}")
-#     return ', '.join(formatted_strings)
-
-def schema_query(dataset):
-    query = f"""
-    SELECT table_name, ddl
-    FROM `{dataset}.INFORMATION_SCHEMA.TABLES`
-    WHERE table_type = 'BASE TABLE'
-    ORDER BY table_name;
-    """
-    return query
-
-# def dataframe_to_schema_dict(df):
-#     """
-#     Convert a DataFrame to a dictionary format expected by display_schema.
-#     Each column in the DataFrame should represent a field in a table.
-#     """
-#     schema_dict = {}
-#     for column in df.columns:
-#         table_name, field_name, field_type = column.split('.')  # Adjust this line based on your DataFrame's column format
-#         if table_name not in schema_dict:
-#             schema_dict[table_name] = {}
-#         schema_dict[table_name][field_name] = field_type
-#     return schema_dict
-
-# def display_schema(schema):
-#     if isinstance(schema, pd.DataFrame):
-#         schema = dataframe_to_schema_dict(schema)
-#     for table_name, fields in schema.items():
-#         st.subheader(f"Table: {table_name}")
-#         for field_name, field_type in fields.items():
-#             st.text(f"{field_name} ({field_type})")
 
 def parse_bigquery_schema_to_dict(documents):
     schema_dict = {}
@@ -83,6 +49,7 @@ def parse_bigquery_schema_to_dict(documents):
         columns = re.findall(r'(\w+ \w+),?', columns_str)
         schema_dict[table_name] = {col.split()[0]: col.split()[1] for col in columns}
     return schema_dict
+
 
 st.set_page_config(
     page_title="BigQueryAI",
@@ -125,33 +92,35 @@ loader = BigQueryLoader(
 
 data = loader.load()
 
-model_name = st.sidebar.selectbox("LLM Model Name", ("gemini-pro","codechat-bison"))
-max_output_tokens = st.sidebar.number_input("Max Output Tokens", min_value=1, value=2048)
-temperature = st.sidebar.slider("Temperature (Randomness)", 0.0, 1.0, 0.0)
-top_p = st.sidebar.slider("Top P (Determinism)", min_value=0, max_value=1,value=1)
-top_k = st.sidebar.number_input("Top K (Vocabulary probability)", min_value=0, max_value=1,value=1)
-verbose = st.sidebar.checkbox("Verbose", value=True)
+# Commented code to properly configure the language model based on the selected model name
+# model_name = st.sidebar.selectbox("LLM Model Name", ("gemini-pro","codechat-bison"))
+# max_output_tokens = st.sidebar.number_input("Max Output Tokens", min_value=1, value=2048)
+# temperature = st.sidebar.slider("Temperature (Randomness)", 0.0, 1.0, 0.0)
+# top_p = st.sidebar.slider("Top P (Determinism)", min_value=0, max_value=1,value=1)
+# top_k = st.sidebar.number_input("Top K (Vocabulary probability)", min_value=0, max_value=1,value=1)
+# verbose = st.sidebar.checkbox("Verbose", value=True)
 
-if model_name =="gemini-pro":
-    llm = ChatGoogleGenerativeAI(
-        model=model_name,
-        convert_system_message_to_human=True,
-        max_output_tokens=max_output_tokens,
-        temperature=temperature,
-        top_p=top_p,
-        top_k=top_k,
-        verbose=verbose,
-    )
-else:
-    llm = ChatVertexAI(
-        model_name=model_name,
-        max_output_tokens=max_output_tokens,
-        temperature=temperature,
-        top_p=top_p,
-        top_k=top_k,
-        verbose=verbose,
-    )
+# if model_name =="gemini-pro":
+#     llm = ChatGoogleGenerativeAI(
+#         model=model_name,
+#         convert_system_message_to_human=True,
+#         max_output_tokens=max_output_tokens,
+#         temperature=temperature,
+#         top_p=top_p,
+#         top_k=top_k,
+#         verbose=verbose,
+#     )
+# else:
+#     llm = ChatVertexAI(
+#         model_name=model_name,
+#         max_output_tokens=max_output_tokens,
+#         temperature=temperature,
+#         top_p=top_p,
+#         top_k=top_k,
+#         verbose=verbose,
+#     )
 
+# Commented code to properly handle the output of the language model
 output_parser = StrOutputParser()
 
 prompt = PromptTemplate.from_template(template)
@@ -185,7 +154,8 @@ if col1.button("Generate Query"):
         custom_retry = Retry(initial=1.0, maximum=10.0, multiplier=2, deadline=300.0)
         bqdata = client.query(googlesql).result(timeout=300, retry=custom_retry).to_dataframe()
         data_placeholder.write(bqdata)
-        if verbose :
-            col1.write(describe_chain.invoke({"bqschema": bqschema,"user_query": user_query,"googlesql": googlesql,"response": bqdata }))
+        # Commented code to properly handle the display of the description
+        # if verbose :
+        #     col1.write(describe_chain.invoke({"bqschema": bqschema,"user_query": user_query,"googlesql": googlesql,"response": bqdata }))
     except Exception as e:
         st.error(f"Error executing query: {e}")
