@@ -1,4 +1,6 @@
 # Gemini BigQuery
+[!(webm)](https://github.com/Lapeyus/Gemini-BigQuery/blob/main/wynnsights.mp4) 
+
 
 ## Introduction
 
